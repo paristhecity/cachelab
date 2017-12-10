@@ -11,6 +11,20 @@
 // Record the statistics of running the cache
 static int hit_count, miss_count, eviction_count;
 
+
+//Cache Parameters
+typedef struct {
+	int s; /* 2**s cache sets */
+	int b; /* cacheline block size 2**b bytes */
+	int E; /* number of cachelines per set */
+	int S; /* number of sets, derived from S = 2**s */
+	int B; /* cacheline block size (bytes), derived from B = 2**b */
+
+	int hits;
+	int misses;
+	int evicts;
+} cache_params;
+
 struct line {
 	int validBit;
 	//tag???
