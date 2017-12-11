@@ -103,6 +103,28 @@ void setCache(struct cache *myCache, int S, int E, int B) {
 }
 
 
+
+/*
+ * freeCache() - * Stuff left unfreed ?!?!
+ */
+void freeCache(struct cache *myCache) {
+	
+	int numSets = myCache->numSets;
+	
+	// free the lines in each set created by setCache
+	for (int i = 0; i < numSets; i++) {
+		free(myCache->mySets[i].myLines);
+	}
+	// free mySets created by setCache
+	free(myCache->mySets);
+	// free myCache created by main
+	free(myCache);
+	return;
+	
+}
+
+
+
 /* getInputs() - returns a malloced array of 3 ints, the input. must be freed ****
 */
 int *getInputs(char* line, ssize_t len) {
@@ -247,12 +269,14 @@ int main(int argc, char *argv[]) {
 			printf("%s\n", status);
 		}
 		
-		free(inputs); // finished using the input line
+		free(inputs); // finished using this input line
 		
 	}
 	
 	fclose(fptr); // finished reading lines from the file
+	freeCache(myCache); // finished using the cache
 	
+	//printCache(myCache);
     printSummary(hit_count, miss_count, eviction_count);
     return 0;
 }
