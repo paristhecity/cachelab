@@ -48,24 +48,48 @@ void printUsage()
 }
 
 
+
+/* printCache() - prints all of the data in the cache
+*/
+void printCache(struct cache *myCache) {
+	for (int i = 0; i < myCache->numSets; i++) {
+		struct set  mySet = myCache->mySets[i];
+		printf("set = %d", i);
+		for (int j = 0; j < mySet.numLines; j++) {
+			printf("\tline = %d\t", j);
+			struct line myLine = mySet.myLines[j];
+			printf("block = %d\n", myLine.block);
+		}
+	}
+}
+
+
+
 /* setCache() - sets the data in the cache to zero
 */
 void setCache(struct cache *myCache, int S, int E, int B) {
 
 	myCache->numSets = S;
 	myCache->mySets = malloc(sizeof(struct set) * S);
-	
+	printf("%d, %d, %d\n", S, E, B);
+	// sets each set
 	for (int i = 0; i < S; i++) {
 	
-		struct set  mySet = myCache->mySets[i];
-		mySet.numLines = E;
-		mySet.myLines = malloc(sizeof(struct line) * E);
+		struct set *mySet = (struct set*) malloc(sizeof(struct set));
+		mySet->numLines = E;
+		mySet->myLines = malloc(sizeof(struct line) * E);
 		
+		// sets each line
 		for (int j = 0; j < E; j++) {
 		
-			struct line myLine = mySet.myLines[j];
-			myLine.blockSize = B;
+			struct line *myLine = (struct line*) malloc(sizeof(struct line));
+			myLine->blockSize = B;
+			myLine->block = 0; // remove!!
+			myLine->validBit = 0;
+			mySet->myLines[j] = *myLine;
 		}
+		
+		myCache->mySets[i] = *mySet;
 		
 	}
 	
@@ -148,10 +172,8 @@ int main(int argc, char *argv[])
 	hit_count = 0;
 	miss_count = 0;
 	eviction_count = 0;
-	struct cache *myCache;
-	myCache = NULL;
-	setCache(myCache, 2<<s, E, 2<<b); // use S=2^s and B=2^b
-	
+	struct cache *myCache = (struct cache*) malloc(sizeof(struct cache));
+	setCache(myCache, 1<<s, E, 1<<b); // use S=2^s and B=2^b
 
 
 
