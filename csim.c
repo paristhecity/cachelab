@@ -12,34 +12,22 @@
 static int hit_count, miss_count, eviction_count;
 
 
-//Cache Parameters
-typedef struct {
-	int s; /* 2**s cache sets */
-	int b; /* cacheline block size 2**b bytes */
-	int E; /* number of cachelines per set */
-	int S; /* number of sets, derived from S = 2**s */
-	int B; /* cacheline block size (bytes), derived from B = 2**b */
-
-	int hits;
-	int misses;
-	int evicts;
-} cache_params;
 
 struct line {
 	int validBit;
 	//tag???
-	int data; //blocks, pointer, mem address?
-	int dataSize; // num blocks?
+	int block; //blocks, pointer, mem address?
+	int blockSize; // B = 2**b
 };
 
 struct set {
-	struct line* myLines;
-	int numLines;
+	struct line* myLines; 
+	int numLines; //E
 };
 
 struct cache {
 	struct set* mySets;
-	int numSets;
+	int numSets; //S = 2**s
 };
 
 
