@@ -23,14 +23,14 @@ struct line {
 };
 
 struct set {
-	int s; //this set ?????????????????????????????????????
+	int s; //this set ????????????????????????????????????? not necessary? rename if was?
 	struct line* myLines; 
-	int numLines; //E
+	int numLines; // E
 };
 
 struct cache {
 	struct set* mySets;
-	int numSets; //S = 2^s
+	int numSets; // S = 2^s
 };
 
 
@@ -55,6 +55,7 @@ void printUsage()
 
 
 
+
 /* 
  * printCache() - prints all of the data in the cache, keep it around for later :P
  */
@@ -69,6 +70,7 @@ void printCache(struct cache *myCache) {
 		}
 	}
 }
+
 
 
 
@@ -104,6 +106,7 @@ void setCache(struct cache *myCache, int S, int E, int B) {
 
 
 
+
 /*
  * freeCache() - * Stuff left unfreed ?!?!
  */
@@ -125,7 +128,9 @@ void freeCache(struct cache *myCache) {
 
 
 
+
 /* getInputs() - returns a malloced array of 3 ints, the input. must be freed ****
+				- kinda ugly? ******
 */
 int *getInputs(char* line, ssize_t len) {
 
@@ -146,21 +151,75 @@ int *getInputs(char* line, ssize_t len) {
 
 
 
+
+/*
+ * checkCache() - returns 0 if not in cache
+ 				- returns 1 if in cache
+ 				- if in cache, will update the time last used
+ */
+int checkCache(struct cache *myCache, int addr) {
+	return 0;
+	//loop through every line (nested for loop for set too)
+		//check if the addr/element/value/block is in this line struct
+		//check if it is valid
+		
+	//weird thing with block size??***
+}
+
+
+
+
+
+/*
+ * putInCache() - returns 0 if no eviction, 1 if an eviction
+ 				- will store addr into the cache, evicting a slot if necessary
+ */
+int putInCache(struct cache *myCache, int addr) {
+	return 0;
+	// beef of program! Rename?!? 'storeCache'? ***********************
+	//loop until availble line
+	//use a helper function to find evicted slot
+}
+
+
+
+
 /*
  * runSim() - returns hit,miss,evict msg
  			- increments hit, misses, eviction counters accordingly
  */
-char *runSim() {
-	return "hit/miss/eviction";
-	//return hit
-	//return miss
-	//return miss eviction
+char *runSim(struct cache *myCache, int addr) {
+	
+	// check if the given value is in the cache
+	int inCache = checkCache(myCache, addr);
+	
+	if (inCache) {
+		// if the element was in the cache, a hit occured
+		hit_count++;
+		return "hit";
+	} else {
+		// if the element was not in the cache, a miss occured
+		miss_count++;
+		
+		// put in the element in the cache, evicting if necessary
+		int evicted = putInCache(myCache, addr);
+		if (evicted) {
+			// an eviction occured to store the element
+			eviction_count++;
+			return "miss eviction";
+		} else {
+			// the element was stored without an eviction
+			return "miss";
+		}
+	}
+	
 }
  
  
  
+ 
 /*
- *
+ * main() - 
  */
 int main(int argc, char *argv[]) {
 	
@@ -238,7 +297,7 @@ int main(int argc, char *argv[]) {
 		// while there is still a line in the file
 		
 		if (line[0] != ' ') {
-			// if there is an instruction load this line, skip this line
+			// if there is an 'instruction load' this line, skip this line
 			continue;
 		}
 		
@@ -256,12 +315,12 @@ int main(int argc, char *argv[]) {
 		char status[20] = "";
 		if ((char) inputs[0] == 'M'){
 			// if the instruction is a data modify
-			strcat(status, runSim());
+			strcat(status, runSim(myCache, inputs[1]));
 			strcat(status, " ");
-			strcat(status, runSim()); // run the simulation again
+			strcat(status, runSim(myCache, inputs[1])); // run the simulation again
 		} else { // (char) inputs[0] == 'L' || (char) inputs[0] == 'S'
 			// if the instruction is a data load or data store
-			strcat(status, runSim());
+			strcat(status, runSim(myCache, inputs[1]));
 		}
 		
 		if (verboseFlag) {
@@ -276,7 +335,7 @@ int main(int argc, char *argv[]) {
 	fclose(fptr); // finished reading lines from the file
 	freeCache(myCache); // finished using the cache
 	
-	//printCache(myCache);
+	//printCache(myCache); // remove*
     printSummary(hit_count, miss_count, eviction_count);
     return 0;
 }
