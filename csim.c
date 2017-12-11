@@ -48,13 +48,13 @@ void printCache(struct cache *myCache) {
 void setCache(struct cache *myCache, int S, int E, int B) {
 
 	myCache->numSets = S;
-	myCache->mySets = malloc(sizeof(set) * S);
+	myCache->mySets = malloc(sizeof(struct set) * S);
 	
 	for (int i = 0; i < S; i++) {
 	
 		struct set  mySet = myCache->mySets[i];
 		mySet.numLines = E;
-		mySet.myLines = malloc(sizeof(line) * E);
+		mySet.myLines = malloc(sizeof(struct line) * E);
 		
 		for (int j = 0; j < E; j++) {
 		
