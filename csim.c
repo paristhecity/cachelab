@@ -21,6 +21,7 @@ struct line {
 };
 
 struct set {
+	int s; //this set
 	struct line* myLines; 
 	int numLines; //E
 };
@@ -30,18 +31,20 @@ struct cache {
 	int numSets; //S = 2**s
 };
 
-
-/* printCache() - prints all of the data in the cache
-*/
-void printCache(struct cache *myCache) {
-	for (int i = 0; i < myCache->numSets; i++) {
-		struct set  mySet = myCache->mySets[i];
-		for (int j = 0; j < mySet.numLines; j++) {
-			struct line myLine = mySet.myLines[j];
-			printf("%d,", myLine.data);
-		}
-		printf("\n");
-	}
+/*
+ * printUsage - Print usage info
+ */
+void printUsage()
+{
+    printf("Usage: ./csim [-hv] -s <num> -E <num> -b <num> -t <file>\n");
+    printf("Options:\n");
+    printf("  -h         Print this help message.\n");
+    printf("  -v         Optional verbose flag.\n");
+    printf("  -s <num>   Number of set index bits.\n");
+    printf("  -E <num>   Number of lines per set.\n");
+    printf("  -b <num>   Number of block offset bits.\n");
+    printf("  -t <file>  Trace file.\n");
+    exit(0);
 }
 
 
@@ -136,8 +139,7 @@ int main(int argc, char *argv[])
 	
 	if (helpFlag) {
 		// print the usage of csim and exit the program successfully
-		printf("Usage: ./csim [-hv] -s <num> -E <num> -b <num -t <file>\n");
-		// check csim-ref for rest *****
+		printUsage();
 		return 0;
 	}
 	
