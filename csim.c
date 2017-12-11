@@ -64,11 +64,9 @@ void setCache(struct cache *myCache, int S, int E, int B) {
 		for (int j = 0; j < E; j++) {
 		
 			struct line myLine = mySet.myLines[j];
-			myLine.dataSize = B;
-			printf("%d,", myLine.dataSize);
+			myLine.blockSize = B;
 		}
 		
-		printf("\n");
 	}
 	
 }
@@ -144,16 +142,19 @@ int main(int argc, char *argv[])
 	}
 	
 	
-	//check options! kick user out!
 	
-	printf("%d,%d,%d\n", s, E, b);
+	
+	// set an empty cache
 	hit_count = 0;
 	miss_count = 0;
 	eviction_count = 0;
-	struct cache myCache;
+	struct cache *myCache;
+	myCache = NULL;
 	setCache(myCache, 2<<s, E, 2<<b); // use S=2^s and B=2^b
-	//printCache(myCache); //personal use, remove
 	
+
+
+
 	
 	FILE *fptr;
 	if ((fptr = fopen(traceFile, "r")) == NULL) {
