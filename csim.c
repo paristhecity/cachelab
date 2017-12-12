@@ -183,9 +183,9 @@ int checkCache(struct cache *myCache, int value) {
 
 /*
  * putInCache() - returns 0 if no eviction, 1 if an eviction
- 				- will store addr into the cache, evicting a slot if necessary
+ 				- will store value into the cache, evicting a slot if necessary
  */
-int putInCache(struct cache *myCache, int addr) {
+int putInCache(struct cache *myCache, int value) {
 	return 0;
 	// beef of program! Rename?!? 'storeCache'? ***********************
 	//loop until availble line
