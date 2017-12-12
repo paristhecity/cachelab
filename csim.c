@@ -17,7 +17,7 @@ static int hit_count, miss_count, eviction_count;
 
 struct line {
 	int validBit;
-	//tag??? **************************************?
+	int tag;
 	int block;
 	int blockSize; // B = 2^b
 };
@@ -94,7 +94,7 @@ void setCache(struct cache *myCache, int S, int E, int B) {
 		
 			struct line *myLine = (struct line*) malloc(sizeof(struct line));
 			myLine->blockSize = B;
-			myLine->block = 0;
+			myLine->block = -1; // a memory address can only have a positive value
 			myLine->validBit = 0;
 			mySet->myLines[j] = *myLine;
 		}
@@ -167,7 +167,7 @@ int checkCache(struct cache *myCache, int value) {
 			struct line myLine = mySet.myLines[j];
 			if (myLine.block == value && myLine.validBit == 1) {
 				// if the value is in this block and is valid
-				//update time used! **************************************
+				//update time used! *********************************************
 				return 1;
 			}
 		}
@@ -182,14 +182,42 @@ int checkCache(struct cache *myCache, int value) {
 
 
 /*
+ *
+ */
+;
+
+
+
+
+/*
  * putInCache() - returns 0 if no eviction, 1 if an eviction
  				- will store value into the cache, evicting a slot if necessary
  */
 int putInCache(struct cache *myCache, int value) {
-	return 0;
+	
+	// loop through the cache find an unsused block in the cache
+	for (int i = 0; i < myCache->numSets; i++) {
+		struct set  mySet = myCache->mySets[i];
+		// loop through every line in this set
+		for (int j = 0; j < mySet.numLines; j++) {
+			struct line myLine = mySet.myLines[j];
+			if (myLine.block == -1 && myLine.validBit == 0) {
+				// if the value is the default intialized value
+				//update time used! *********************************************
+				myCache->mySets[i].myLines[j].block = value;
+				myCache->mySets[i].myLines[j].validBit = 1;
+				return 0; // no eviction occured
+			}
+		}
+	}
+	
+	// Implement an eviction! can be helper function?*********
+	// lru***
+	
+	return 1; // an eviction occured
+	
 	// beef of program! Rename?!? 'storeCache'? ***********************
-	//loop until availble line
-	//use a helper function to find evicted slot
+
 }
 
 
@@ -198,6 +226,7 @@ int putInCache(struct cache *myCache, int value) {
 /*
  * runSim() - returns hit,miss,evict msg
  			- increments hit, misses, eviction counters accordingly
+ 			*WRONG! WORK WITH SET BITS AND TAG BITS!!!!!*****
  */
 char *runSim(struct cache *myCache, int addr) {
 	
@@ -323,12 +352,13 @@ int main(int argc, char *argv[]) {
 
 		
 		// run the simulation and store the return message in status
-		char status[20] = "";
+		char status[20] = "";//incorrect size?************
 		if ((char) inputs[0] == 'M'){
 			// if the instruction is a data modify
 			strcat(status, runSim(myCache, inputs[1]));
 			strcat(status, " ");
 			strcat(status, runSim(myCache, inputs[1])); // run the simulation again
+			//second run is an assured hit????***********************************************
 		} else { // (char) inputs[0] == 'L' || (char) inputs[0] == 'S'
 			// if the instruction is a data load or data store
 			strcat(status, runSim(myCache, inputs[1]));
