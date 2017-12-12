@@ -157,11 +157,22 @@ int *getInputs(char* line, ssize_t len) {
  				- returns 1 if in cache
  				- if in cache, will update the time last used
  */
-int checkCache(struct cache *myCache, int addr) {
+int checkCache(struct cache *myCache, int value) {
+
+	// loop through every set in the cache
+	for (int i = 0; i < myCache->numSets; i++) {
+		struct set  mySet = myCache->mySets[i];
+		// loop through every line in this set
+		for (int j = 0; j < mySet.numLines; j++) {
+			struct line myLine = mySet.myLines[j];
+			if (myLine.block == value && myLine.validBit == 1) {
+				// if the value is in this block and is valid
+				//update time used! **************************************
+				return 1;
+			}
+		}
+	}
 	return 0;
-	//loop through every line (nested for loop for set too)
-		//check if the addr/element/value/block is in this line struct
-		//check if it is valid
 		
 	//weird thing with block size??***
 }
