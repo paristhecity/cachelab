@@ -14,20 +14,12 @@ static int hit_count, miss_count, eviction_count;
 typedef unsigned long long int mem_addr_t;
 
 
-	int s; /* 2**s cache sets */
-	int b; /* cacheline block size 2**b bytes */
-	int E; /* number of cachelines per set */
-	int S; /* number of sets, derived from S = 2**s */
-	int B; /* cacheline block size (bytes), derived from B = 2**b */
-
-
 
 
 struct line {
-	int last_used;
-	int valid;
+	int timeUsed;
+	int validBit;
 	mem_addr_t tag;
-	char *block;
 	int blockSize;
 };
 
@@ -42,7 +34,6 @@ struct cache{
 };
 
 
-int verbosity;
 
 
 
@@ -62,9 +53,30 @@ void printUsage()
 }
 
 
-/* setCache() - sets the data in the cache to zero
-*/
-void setCache(struct cache *myCache) {
+
+
+/* 
+ * printCache() - prints all of the data in the cache
+ */
+void printCache(struct cache *myCache) {
+	for (int i = 0; i < myCache->numSets; i++) {
+		struct set  mySet = myCache->mySets[i];
+		printf("set = %d", i);
+		for (int j = 0; j < mySet.numLines; j++) {
+			printf("\tline = %d\t", j);
+			struct line myLine = mySet.myLines[j];
+			printf("block tag = %llu\n", myLine.tag);
+		}
+	}
+}
+
+
+
+
+/* 
+ * setCache() - sets the data in the cache to zero
+ */
+void setCache(struct cache *myCache, int S, int E, int B) {
 
 	myCache->numSets = S;
 	myCache->mySets = malloc(sizeof(struct set) * S);
@@ -74,217 +86,207 @@ void setCache(struct cache *myCache) {
 		struct set  mySet = myCache->mySets[i];
 		mySet.numLines = E;
 		mySet.myLines = malloc(sizeof(struct line) * E);
-		
 		for (int j = 0; j < E; j++) {
 		
 			struct line myLine;
 			myLine.blockSize = B;
-			myLine.last_used = 0;
-			myLine.valid = 0;
+			myLine.timeUsed = 0;
+			myLine.validBit = 0;
 			myLine.tag = 0; 
 			mySet.myLines[j] = myLine;	
 		}
-		
+		myCache->mySets[i] = mySet;
 	}
 	
 }
 
 
 
-struct cache build_cache(int num_sets, int num_lines, int block_size) 
-{
-
-	struct cache newCache;	
-	struct set mySet;
-	struct line myLine;
-
-	newCache.mySets = (struct set *) malloc(sizeof(struct set) * num_sets);
-
-	for (int setIndex = 0; setIndex < num_sets; setIndex ++) {
-		
-		mySet.myLines =  (struct line *) malloc(sizeof(struct line) * num_lines);
-		newCache.mySets[setIndex] = mySet;
-
-		for (int lineIndex = 0; lineIndex < num_lines; lineIndex ++) {
-			
-			myLine.last_used = 0;
-			myLine.valid = 0;
-			myLine.tag = 0; 
-			mySet.myLines[lineIndex] = myLine;	
-		}
-		
-	} 
-
-	return newCache;
-	
-}
-
-
 
 /*
- *
+ * freeCache() -
  */
-void freeCache(struct cache sim_cache, long long num_sets, int num_lines, long long block_size) {
+void freeCache(struct cache *myCache) {
 	
-
-	for (int setIndex = 0; setIndex < num_sets; setIndex ++) 
-	{
-		struct set mySet = sim_cache.mySets[setIndex];
-		
-		if (mySet.myLines != NULL) {	
-			free(mySet.myLines);
-		}
-		
-	} 
-	if (sim_cache.mySets != NULL) {
-		free(sim_cache.mySets);
+	int numSets = myCache->numSets;
+	
+	// free the lines in each set created by setCache
+	for (int i = 0; i < numSets; i++) {
+		free(myCache->mySets[i].myLines);
 	}
+	// free mySets created by setCache
+	free(myCache->mySets);
+	// free myCache created by main
+	free(myCache);
+	return;
+	
 }
 
 
 
-/*
- *
- */
-int find_empty_line(struct set query_set) {
-	
-	int num_lines = E;
-	struct line myLine;
 
-	for (int index = 0; index < num_lines; index ++) {
-		myLine = query_set.myLines[index];
-		if (myLine.valid == 0) {
+/*
+ * checkEmptyLine() -
+ */
+int checkEmptyLine(struct set mySet) {
+
+	for (int index = 0; index < mySet.numLines; index ++) {
+		if (mySet.myLines[index].validBit == 0) {
 			return index;
 		}
 	}
-	//Control flow should not fall here. Method is only called if cache_full flag is set to false.
+	
 	return -1;
 }
 
 
 
-/*
- *
+
+/* 
+ * getMostRecent() - find the most recently used in this line
  */
-int find_evict_line(struct set query_set, int *used_lines) {
-	
-	//Returns index of least recently used line.
-	//used_lines[0] gives least recently used line, used_lines[1] gives current lru counter or most recently used line.
-	int num_lines = E;
-	int max_used = query_set.myLines[0].last_used;
-	int min_used = query_set.myLines[0].last_used;
-	int min_used_index = 0;
-
-	struct line myLine;
-
-	for (int lineIndex = 1; lineIndex < num_lines; lineIndex ++) {
-		myLine = query_set.myLines[lineIndex];
-
-		if (min_used > myLine.last_used) {
-			min_used_index = lineIndex;	
-			min_used = myLine.last_used;
-		}
-
-		if (max_used < myLine.last_used) {
-			max_used = myLine.last_used;
+int getMostRecent(struct set mySet) {
+	int max_used = mySet.myLines[0].timeUsed;
+	for (int lineIndex = 1; lineIndex < mySet.numLines; lineIndex ++) {
+		struct line currLine = mySet.myLines[lineIndex];
+		if (max_used < currLine.timeUsed) {
+			max_used = currLine.timeUsed;
 		}
 	}
-
-	used_lines[0] = min_used;
-	used_lines[1] = max_used;
-	return min_used_index;
+	return max_used;
 }
 
 
 
+
 /*
- *
+ * evictLine() -
  */
-void run_sim(struct cache sim_cache, mem_addr_t address) {
-		
-		int cache_full = 1;
+int evictLine(struct set mySet) {
+	
+	//Returns index of least recently used line.
 
-		int num_lines = E;
-		int prev_hits = hit_count;
+	int lruTime = mySet.myLines[0].timeUsed;
+	int lruIndex = 0;
 
-		int tag_size = (64 - (s + b));
-		mem_addr_t input_tag = address >> (s + b);
-		unsigned long long setIndex = (address << tag_size) >> (tag_size + b);
-		
-  		struct set query_set = sim_cache.mySets[setIndex];
 
-		for (int lineIndex = 0; lineIndex < num_lines; lineIndex ++) 	{
-			
-			struct line myLine = query_set.myLines[lineIndex];
-			
-			if (myLine.valid) {
-					
-				if (myLine.tag == input_tag) {
-						
-					myLine.last_used ++;
-					hit_count ++;
-					query_set.myLines[lineIndex] = myLine;
-				}
+	for (int lineIndex = 1; lineIndex < mySet.numLines; lineIndex++) {
+		struct line currLine = mySet.myLines[lineIndex];
 
-			} else if (!(myLine.valid) && (cache_full)) {
-				//We found an empty line
-				cache_full = 0;		
-			}
-
-		}	
-
-		if (prev_hits == hit_count) {
-			//Miss in cache;
-			miss_count++;
-		} else {
-			//Data is in cache
-			return;
+		if (currLine.timeUsed < lruTime) {
+			lruIndex = lineIndex;	
+			lruTime = currLine.timeUsed;
 		}
 
-		//We missed, so evict if necessary and write data into cache.
-		
-		int *used_lines = (int*) malloc(sizeof(int) * 2);
-		int min_used_index = find_evict_line(query_set, used_lines);	
+	}
 
-		if (cache_full) 
-		{
-			eviction_count++;
-
-			//Found least-recently-used line, overwrite it.
-			query_set.myLines[min_used_index].tag = input_tag;
-			query_set.myLines[min_used_index].last_used = used_lines[1] + 1;
-		
-		}
-
-		else
-	        {
-			int empty_index = find_empty_line(query_set);
-
-			//Found first empty line, write to it.
-			query_set.myLines[empty_index].tag = input_tag;
-			query_set.myLines[empty_index].valid = 1;
-			query_set.myLines[empty_index].last_used = used_lines[1] + 1;
-		}						
-
-		free(used_lines);
-		return;
+	return lruIndex;
 }
 
 
 
+
 /*
- *
+ * checkSet() - check if the tag is in the set return 1 if in cache, 0 if not
+ */
+int checkSet(struct set mySet, mem_addr_t tag) {
+	
+	for (int lineIndex = 0; lineIndex < mySet.numLines; lineIndex++) {
+			
+		struct line currLine = mySet.myLines[lineIndex];
+			
+		if (currLine.validBit && currLine.tag == tag) {
+						
+			currLine.timeUsed++;
+			mySet.myLines[lineIndex] = currLine;
+			return 1;
+				
+		}
+
+	}
+			
+	return 0;
+}
+
+
+
+
+/*
+ * putInSet() - return 0 if no eviction, 1 if an eviction
+ */
+int putInSet(struct set targetSet, mem_addr_t tag) {
+
+
+	//evict if necessary and write data into cache.
+		
+	int mostRecent = getMostRecent(targetSet);
+	int lineIndex = checkEmptyLine(targetSet);
+	int evicted = 0;
+	
+	if (lineIndex == -1) {
+		lineIndex = evictLine(targetSet);
+		evicted = 1;
+	} 
+	
+	targetSet.myLines[lineIndex].tag = tag;
+	targetSet.myLines[lineIndex].validBit = 1;
+	targetSet.myLines[lineIndex].timeUsed = mostRecent + 1;
+	
+	return evicted;
+	
+}
+
+
+
+
+/*
+ * runSim() -
+ */
+char *runSim(struct cache *myCache, mem_addr_t address, int s, int b) {
+
+		int tagLength = (64 - (s + b));
+		mem_addr_t tag = address >> (s + b);
+		unsigned long long setIndex = (address << tagLength) >> (tagLength + b);
+		
+  		struct set targetSet = myCache->mySets[setIndex];
+  		
+  		if (checkSet(targetSet, tag)) {
+  			// if the tag was in the set, a hit occured
+  			hit_count++;
+  			return "hit";
+  		} else {
+  			// otherwise, a miss occured
+  			miss_count++;
+  			
+  			if (putInSet(targetSet, tag)) {
+  				// an eviction occured while putting the tag in the set
+  				eviction_count++;
+  				return "miss eviction";
+  			} else {
+  				//
+	  			return "miss";
+  			}
+  		}
+
+}
+
+
+
+
+/*
+ * main() -
  */
 int main(int argc, char *argv[]) {
 
 	int opt;	
-
+	int verboseFlag = 0, helpFlag = 0;
+	int s, E, b;
 	char *traceFile;
 	
     while((opt = getopt(argc, argv, "vs:E:b:t:h")) != -1) {
         switch(opt) {
         case 'v':
-            verbosity = 1;
+            verboseFlag = 1;
             break;
         case 's':
             s = atoi(optarg);
@@ -299,27 +301,29 @@ int main(int argc, char *argv[]) {
             traceFile = optarg;
             break;
         case 'h':
-            printUsage();
-            exit(0);
+            helpFlag = 1;
         }
     }
 
-    if (s == 0 || E == 0 || b == 0 || traceFile == NULL) 
-	{
-        printf("%s: Missing required command line argument\n", argv[0]);
-        printUsage(argv);
+	if (helpFlag) {
+		// print the usage of csim and exit the program successfully
+		printUsage();
+		exit(0);
+	} else if (s == 0 || E == 0 || b == 0 || traceFile == NULL) {
+		// if incorrect input was given, exit the program unsuccessfully
+        printf("Invalid input\n");
         exit(1);
     }
 
 	
-	
+	// reset the global counters for hits, misses, and evictions
 	hit_count = 0;
 	miss_count = 0;
 	eviction_count = 0;
+
 	
-	//struct cache myCache build_cache(1 << s, E, 1 << b);
-	struct cache *myCache = malloc(sizeof(struct cache));
-	setCache(myCache);
+	struct cache *myCache = malloc(sizeof(struct cache*));
+	setCache(myCache, 1 << s, E, 1 << b); // use S=2^s and B=2^b
 	
 	
 	FILE *fptr;
@@ -329,33 +333,38 @@ int main(int argc, char *argv[]) {
 		exit(1);
 	}
 	
-	
+
 	char instruction;
 	mem_addr_t address;
 	int size;
 	
 	while (fscanf(fptr, " %c %llx,%d", &instruction, &address, &size) == 3) {
+		// while there is still a line in the file
 
-		switch(instruction) {
-			case 'I':
-				break;
-			case 'L':
-				run_sim(myCache, address);
-				break;
-			case 'S':
-				run_sim(myCache, address);
-				break;
-			case 'M':
-				run_sim(myCache, address);
-				run_sim(myCache, address);	
-				break;
+		if (instruction == 'I') {
+			// if there is an 'instruction load' this line, skip this line
+			continue;
+		}
+		
+		// run the simulation once (for 'L' or 'S') and record the result
+		char *status;
+		status = runSim(myCache, address, s, b);
+		
+		if (instruction == 'M') {
+			// run the simulation again, hit regardless???
+			status = runSim(myCache, address, s, b);
+		}
+		
+		if (verboseFlag) {
+			// if the verbose flag is set, print the input line and hit/miss/eviction status
+			printf("%c %llx,%d %s\n", instruction, address, size, status);
 		}
 	}
 	
-	freeCache(myCache, 1 << s, E, 1 << b);
+	fclose(fptr);
+	freeCache(myCache);
 	
     printSummary(hit_count, miss_count, eviction_count);
-	fclose(fptr);
 
     return 0;
 }
