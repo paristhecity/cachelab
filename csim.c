@@ -181,6 +181,7 @@ int getMostRecent(struct set mySet) {
 	}
 	
 	return mostRecent;
+}
 	
 
 
@@ -280,30 +281,30 @@ int putInSet(struct set targetSet, unsigned tag) {
  */
 char *runSim(struct cache *myCache, unsigned address, int s, int b) {
 
-		// extract the tagBits and setBits from the address
-		int tagLength = (sizeof(unsigned)*8 - (s + b));
-		unsigned tag = address >> (s + b);
-		unsigned setIndex = (address << tagLength) >> (tagLength + b);
+	// extract the tagBits and setBits from the address
+	int tagLength = (sizeof(unsigned)*8 - (s + b));
+	unsigned tag = address >> (s + b);
+	unsigned setIndex = (address << tagLength) >> (tagLength + b);
 		
-  		struct set targetSet = myCache->mySets[setIndex];
+	struct set targetSet = myCache->mySets[setIndex];
   		
-  		if (checkSet(targetSet, tag)) {
-  			// if the tag was in the set, a hit occured
-  			hit_count++;
-  			return "hit";
-  		} else {
-  			// otherwise, a miss occured
-  			miss_count++;
+	if (checkSet(targetSet, tag)) {
+		// if the tag was in the set, a hit occured
+		hit_count++;
+		return "hit";
+	} else {
+		// otherwise, a miss occured
+		miss_count++;
   			
-  			if (putInSet(targetSet, tag)) {
-  				// an eviction occured while putting the tag in the set
-  				eviction_count++;
-  				return "miss eviction";
-  			} else {
-  				// no eviction occured, an empty line was found
-	  			return "miss";
-  			}
-  		}
+		if (putInSet(targetSet, tag)) {
+			// an eviction occured while putting the tag in the set
+  			eviction_count++;
+  			return "miss eviction";
+  		} else {
+  			// no eviction occured, an empty line was found
+		  	return "miss";
+	  	}
+	}
 
 }
 
@@ -322,34 +323,34 @@ int main(int argc, char *argv[]) {
 	int s, E, b;
 	char *traceFile;
 	
-    while((opt = getopt(argc, argv, "vs:E:b:t:h")) != -1) {
-        switch(opt) {
-        case 'v':
-        	// the verboseFlag is set
-            verboseFlag = 1;
-            break;
-        case 'h':
-        	// the helpFlag is set
-            helpFlag = 1;
-            break;
-        case 's':
-        	// s is the number of set index bits
-            s = atoi(optarg);
-            break;
-        case 'E':
-        	// E is the number of lines per set
-            E = atoi(optarg);
-            break;
-        case 'b':
-        	// b is the number of block bits
-            b = atoi(optarg);
-            break;
-        case 't':
-        	// the given tracefile
-            traceFile = optarg;
-            break;
-        }
-    }
+	while((opt = getopt(argc, argv, "vs:E:b:t:h")) != -1) {
+		switch(opt) {
+		case 'v':
+			// the verboseFlag is set
+			verboseFlag = 1;
+			break;
+		case 'h':
+			// the helpFlag is set
+			helpFlag = 1;
+            		break;
+		case 's':
+			// s is the number of set index bits
+			s = atoi(optarg);
+			break;
+		case 'E':
+			// E is the number of lines per set
+			E = atoi(optarg);
+			break;
+		case 'b':
+			// b is the number of block bits
+			b = atoi(optarg);
+			break;
+		case 't':
+			// the given tracefile
+			traceFile = optarg;
+			break;
+		}
+	}
 
 	if (helpFlag) {
 		// print the usage of csim and exit the program successfully
@@ -359,7 +360,7 @@ int main(int argc, char *argv[]) {
 		// if incorrect input was given, exit the program unsuccessfully
         printf("Invalid input\n");
         exit(1);
-    }
+    	}
 
 	
 	// check if a valid file was given
