@@ -13,17 +13,12 @@
 static int hit_count = 0, miss_count = 0, eviction_count = 0;
 
 
-/* Always use a 64-bit variable to hold memory addresses*/
-typedef unsigned long long int mem_addr_t; //rename! "tag"?*********************************
-
-
-
 
 struct line {
-	int timeUsed;
 	int validBit;
-	mem_addr_t tag; //**********"tag myTag"?*****************************************
+	unsigned tag;
 	int blockSize;
+	int timeUsed;
 };
 
 struct set{
@@ -41,7 +36,7 @@ struct cache{
 
 
 /*
- * printUsage() - Print usage info
+ * printUsage() - print usage info
  */
 void printUsage() {
 
@@ -70,7 +65,7 @@ void printCache(struct cache *myCache) {
 		for (int j = 0; j < mySet.numLines; j++) {
 			printf("\tline = %d\t", j);
 			struct line myLine = mySet.myLines[j];
-			printf("block tag = %llu\n", myLine.tag);
+			printf("block tag = %u\n", myLine.tag);
 		}
 	}
 	
@@ -213,9 +208,9 @@ int evictLine(struct set mySet) {
 
 
 /*
- * checkSet(struct set, mem_addr_t) - check if the tag is in the set return 1 if in cache, 0 if not...*
+ * checkSet(struct set, unsigned) - check if the tag is in the set return 1 if in cache, 0 if not...*
  */
-int checkSet(struct set mySet, mem_addr_t tag) {
+int checkSet(struct set mySet, unsigned tag) {
 	
 	// loop through every line in the current set
 	for (int i = 0; i < mySet.numLines; i++) {
@@ -237,9 +232,9 @@ int checkSet(struct set mySet, mem_addr_t tag) {
 
 
 /*
- * putInSet(struct set, mem_addr_t) - return 0 if no eviction, 1 if an eviction...
+ * putInSet(struct set, unsigned) - return 0 if no eviction, 1 if an eviction...
  */
-int putInSet(struct set targetSet, mem_addr_t tag) {
+int putInSet(struct set targetSet, unsigned tag) {
 		
 	// update the most recent time and check for an empty line
 	int mostRecent = getMostRecent(targetSet);
@@ -265,14 +260,14 @@ int putInSet(struct set targetSet, mem_addr_t tag) {
 
 
 /*
- * runSim(struct cache *, mem_addr_t, int, int) - ...
+ * runSim(struct cache *, unsigned, int, int) - ...
  */
-char *runSim(struct cache *myCache, mem_addr_t address, int s, int b) {
+char *runSim(struct cache *myCache, unsigned address, int s, int b) {
 
 		// extract the tagBits and setBits from the address
 		int tagLength = (64 - (s + b));
-		mem_addr_t tag = address >> (s + b);
-		unsigned long long setIndex = (address << tagLength) >> (tagLength + b);
+		unsigned tag = address >> (s + b);
+		unsigned setIndex = (address << tagLength) >> (tagLength + b);
 		
   		struct set targetSet = myCache->mySets[setIndex];
   		
@@ -365,10 +360,10 @@ int main(int argc, char *argv[]) {
 	
 
 	char instruction;
-	mem_addr_t address;
+	unsigned address;
 	int size;
 	
-	while (fscanf(fptr, " %c %llx,%d", &instruction, &address, &size) == 3) {
+	while (fscanf(fptr, " %c %x,%d", &instruction, &address, &size) == 3) {
 		// while there is still a line in the file
 
 		if (instruction == 'I') {
@@ -389,7 +384,7 @@ int main(int argc, char *argv[]) {
 		if (verboseFlag) {
 			// if the verbose flag is set, print the input line and hit/miss/eviction status
 			status[18] = '\0';
-			printf("%c %llx,%d %s\n", instruction, address, size, status);
+			printf("%c %x,%d %s\n", instruction, address, size, status);
 		}
 	}
 	
