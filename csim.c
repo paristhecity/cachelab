@@ -35,8 +35,29 @@ struct cache{
 
 
 
+/* 
+ * printCache(struct cache *) - prints out every tag within the cache by set and
+ *		then by row.
+ */
+void printCache(struct cache *myCache) {
+
+	for (int i = 0; i < myCache->numSets; i++) {
+		struct set  mySet = myCache->mySets[i];
+		printf("set = %d", i);
+		for (int j = 0; j < mySet.numLines; j++) {
+			printf("\tline = %d\t", j);
+			struct line myLine = mySet.myLines[j];
+			printf("tag = %u\n", myLine.tag);
+		}
+	}
+	
+}
+
+
+
+
 /*
- * printUsage() - print usage info
+ * printUsage() - will print out the usage information for the csim program.
  */
 void printUsage() {
 
@@ -48,6 +69,7 @@ void printUsage() {
     printf("  -E <num>   Number of lines per set.\n");
     printf("  -b <num>   Number of block offset bits.\n");
     printf("  -t <file>  Trace file.\n");
+    return;
     
 }
 
@@ -55,27 +77,10 @@ void printUsage() {
 
 
 /* 
- * printCache(struct cache *) - prints all of the data in the cache (loop)...
- */
-void printCache(struct cache *myCache) {
-
-	for (int i = 0; i < myCache->numSets; i++) {
-		struct set  mySet = myCache->mySets[i];
-		printf("set = %d", i);
-		for (int j = 0; j < mySet.numLines; j++) {
-			printf("\tline = %d\t", j);
-			struct line myLine = mySet.myLines[j];
-			printf("block tag = %u\n", myLine.tag);
-		}
-	}
-	
-}
-
-
-
-
-/* 
- * setCache(struct cache *, int, int, int) - sets the data/tag in the cache to zero(malloc)...
+ * setCache(struct cache *, int, int, int) - will intialize all of the data in
+ *		the cache to zero. Each block will have their validBit set to false.
+ *		Note that the storage that has been malloced for every set and every
+ *		line must be freed outside of this function.
  */
 void setCache(struct cache *myCache, int S, int E, int B) {
 
@@ -96,10 +101,10 @@ void setCache(struct cache *myCache, int S, int E, int B) {
 		
 			// fill in current line with invalid data
 			struct line myLine;
-			myLine.timeUsed = 0;
 			myLine.validBit = 0;
 			myLine.tag = 0; 
 			myLine.blockSize = B;
+			myLine.timeUsed = 0;
 			// set the sets current line to this line
 			mySet.myLines[j] = myLine;	
 			
@@ -114,7 +119,8 @@ void setCache(struct cache *myCache, int S, int E, int B) {
 
 
 /*
- * freeCache(struct cache *) - ...
+ * freeCache(struct cache *) - will free all of the malloced data created by
+ *		setCache. Will also free the cache that got passed to this function.
  */
 void freeCache(struct cache *myCache) {
 	
@@ -137,9 +143,10 @@ void freeCache(struct cache *myCache) {
 
 
 /*
- * checkEmptyLine(struct set) - ...
+ * getAvailableIndex(struct set) - will return the index value of the first
+ *		available line that can be used.
  */
-int checkEmptyLine(struct set mySet) {
+int getAvailableIndex(struct set mySet) {
 
 	// loop through every line in this set
 	for (int index = 0; index < mySet.numLines; index ++) {
@@ -157,13 +164,14 @@ int checkEmptyLine(struct set mySet) {
 
 
 /* 
- * getMostRecent(struct set) - find the most recently used in this line...
+ * getMostRecent(struct set) - will return the time of the most recently used
+ *		line.
  */
 int getMostRecent(struct set mySet) {
 
-	int mostRecent = mySet.myLines[0].timeUsed;
+	int mostRecent;
 	// check every line in this set
-	for (int i = 1; i < mySet.numLines; i++) {
+	for (int i = 0; i < mySet.numLines; i++) {
 		struct line currLine = mySet.myLines[i];
 		
 		if (currLine.timeUsed > mostRecent) {
@@ -174,15 +182,16 @@ int getMostRecent(struct set mySet) {
 	
 	return mostRecent;
 	
-}
+
 
 
 
 
 /*
- * evictLine(struct set) - returns index of least recently used line...
+ * getLRUIndex(struct set) - will return the index of the least recently used
+ *		line.
  */
-int evictLine(struct set mySet) {
+int getLRUIndex(struct set mySet) {
 
 	// record the least recently used time and corresponding index
 	int lruTime = mySet.myLines[0].timeUsed;
@@ -208,7 +217,8 @@ int evictLine(struct set mySet) {
 
 
 /*
- * checkSet(struct set, unsigned) - check if the tag is in the set return 1 if in cache, 0 if not...*
+ * checkSet(struct set, unsigned) - will return 1 if the given tag is in the
+ *		given set, will return 0 otherwise.
  */
 int checkSet(struct set mySet, unsigned tag) {
 	
@@ -232,25 +242,29 @@ int checkSet(struct set mySet, unsigned tag) {
 
 
 /*
- * putInSet(struct set, unsigned) - return 0 if no eviction, 1 if an eviction...
+ * putInSet(struct set, unsigned) - will return 1 if an eviction occured will
+ *		putting the tag into the set, will return 0 ifno eviction occured.
  */
 int putInSet(struct set targetSet, unsigned tag) {
 		
 	// update the most recent time and check for an empty line
 	int mostRecent = getMostRecent(targetSet);
-	int lineIndex = checkEmptyLine(targetSet);
-	int evicted = 0; // no eviction occured
+	int lineIndex = getAvailableIndex(targetSet);
+	int evicted = 0; // assume no eviction occured
 	
 	if (lineIndex == -1) {
 		// if there was no empty line in the set, evict one
-		lineIndex = evictLine(targetSet);
+		lineIndex = getLRUIndex(targetSet);
 		evicted = 1; // an eviction occured
-	} 
+	}
 	
 	// the tag is inserted into the set, is valid, and is the new most recent
-	targetSet.myLines[lineIndex].tag = tag;
-	targetSet.myLines[lineIndex].validBit = 1;
-	targetSet.myLines[lineIndex].timeUsed = mostRecent + 1;
+	struct line newLine = targetSet.myLines[lineIndex];
+	newLine.validBit = 1;
+	newLine.tag = tag;
+	newLine.timeUsed = mostRecent + 1;
+	// set the target line to this new line
+	targetSet.myLines[lineIndex] = newLine;
 	
 	return evicted;
 	
@@ -260,12 +274,14 @@ int putInSet(struct set targetSet, unsigned tag) {
 
 
 /*
- * runSim(struct cache *, unsigned, int, int) - ...
+ * runSim(struct cache *, unsigned, int, int) - will store the created tag into
+ *		the cache and return the string status of whether or not a hit, miss, or
+ *		eviction occured.
  */
 char *runSim(struct cache *myCache, unsigned address, int s, int b) {
 
 		// extract the tagBits and setBits from the address
-		int tagLength = (64 - (s + b));
+		int tagLength = (sizeof(unsigned)*8 - (s + b));
 		unsigned tag = address >> (s + b);
 		unsigned setIndex = (address << tagLength) >> (tagLength + b);
 		
@@ -295,7 +311,8 @@ char *runSim(struct cache *myCache, unsigned address, int s, int b) {
 
 
 /*
- * main(int, char * []) - ...
+ * main(int, char * []) - will parse through command line input and run the 
+ *		cache simulator.
  */
 int main(int argc, char *argv[]) {
 
