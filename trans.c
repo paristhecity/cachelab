@@ -1,4 +1,10 @@
 /* 
+ * Peter Maida, Paris Lopez
+ * December 10, 2017
+ */
+
+
+/* 
  * trans.col - Matrix transpose B = A^T
  *
  * Each transpose function must have a prototype of the form:
@@ -20,114 +26,111 @@ int is_transpose(int M, int N, int A[N][M], int B[M][N]);
  *     be graded. 
  */
 char transpose_submit_desc[] = "Transpose submission";
-void transpose_submit(int M, int N, int A[N][M], int B[M][N])
-{
-	int blocksize; // dimensions of block
-	int col, row; // variables to iterate between blocks
-	int i, j, d; // variables to iterate within blocks, d when i and j are equal
-	int temp; //temporary variablt to transfer A -> B
-	int e0, e1, e2, e3, e4; // elements of block with dimensions 64x64
+void transpose_submit(int M, int N, int A[N][M], int B[M][N]) {
 
-	// Block sizes according to Matrix dimensions
-	if(N == 32 && M == 32)
-		blocksize = 8;
-	else if(N == 64 && M == 64)
-		blocksize = 4;
+	// set block side lengths based on best test results
+	int blockLength;
+	if (N == 32 && M == 32)
+		blockLength = 8;
+	else if (N == 64 && M == 64)
+		blockLength = 4;
 	else
-		blocksize = 16;
+		blockLength = 16;
 
 
-	if(N == 32 && M == 32) {
-		for(row = 0; row < N; row += blocksize) {
-			for(col = 0; col < M; col += blocksize) {
-				for(i = row; i < row + blocksize; i++) {
-					for(j = col; j < col + blocksize; j++){
-						if(i != j) {
-							B[j][i] = A[i][j];
+	// loop through each block in the cache, row major
+	for (int row = 0; row < N; row += blockLength) {
+		for (int col = 0; col < M; col += blockLength) {
+		
+			// Break up each test case
+			if (N == 32 && M == 32) {
+				// the first test case
+				
+				// loop through each row in the current block
+				for (int rowOffset = 0; rowOffset < blockLength; rowOffset++) {
+				
+					int blockRow = row + rowOffset; // the current row of the block 
+					int center; // used when the matrix is a square
+					
+					// loop through each cell in the current row
+					for (int colOffset = 0; colOffset < blockLength; colOffset++) {
+					
+						int blockCol = col + colOffset; // the current col of the block
+						
+						if(blockRow == blockCol) {
+							// if we are on the matrix diagonal, store the center value
+							center = A[blockRow][blockCol];
+						} else {
+							// if we are not on the diagonal, put A into B
+							B[blockCol][blockRow] = A[blockRow][blockCol];
 						}
-						else {
-							temp = A[i][j];
-							d = i;
-						}
-					}
-					if (row == col)	
-					{
-						B[d][d] = temp;
-					}
-				}
-			}
-		}
-	}
-	else if(N == 64 && M == 64){
-		for(row = 0; row < N; row += blocksize) {
-			for(col = 0; col < M; col += blocksize) {
-
-				//Elements reassigned to separate variables from A[row][], A[row+1][], A[row+2][]
-				//because A[][] cannot be modiied
-				e0 = A[row][col];
-				e1 = A[row+1][col];
-				e2 = A[row+2][col];
-				e3 = A[row+2][col+1];
-				e4 = A[row+2][col+2];
-
-				//Elements assigned to B[col+3][]
-				B[col+3][row] = A[row][col+3];
-				B[col+3][row+1] = A[row+1][col+3];
-				B[col+3][row+2] = A[row+2][col+3];
-
-				//Elements assigned to B[col+2][] 
-				B[col+2][row] = A[row][col+2];
-				B[col+2][row+1] = A[row+1][col+2];
-				B[col+2][row+2] = e4;
-
-				//Elements assigned to B[col+1][]
-				e4 = A[row+1][col+1];
-				B[col+1][row] = A[row][col+1];
-				B[col+1][row+1] = e4;
-				B[col+1][row+2] = e3;
-
-				//Elements assigned to B[col][]
-				B[col][row] = e0;
-				B[col][row+1] = e1;
-				B[col][row+2] = e2;
-
-				//Elements assigned from A[row+3][] to B[...][row+3]
-				B[col][row+3] = A[row+3][col];
-				B[col+1][row+3] = A[row+3][col+1];
-				B[col+2][row+3] = A[row+3][col+2];
-
-				//Elements asigned to B[col+3][]
-				e0 = A[row+3][col+3];
-				B[col+3][row+3] = e0;
-			}
-		}
-	}
-	else {
-		for(row = 0; row < N; row += blocksize) {
-			for(col = 0; col < M; col += blocksize) {
-				for(i = row; i < row + blocksize && i < N; i++) {
-					for(j = col; j < col + blocksize && j < M; j++){
-							temp = A[i][j];
-							B[j][i] = temp;
 						
 					}
+					
+					if (row == col) {
+						// if the matrix is square, store the center value on the diagonal
+						B[blockRow][blockRow] = center;
+					}
+					
 				}
-			}
-		}
-	}
-}
+				
+			} else if (N == 64 && M == 64) {
+				//the second test case
+				
+				// create a 1D array with enough room for all elements in the 2D block
+				int blockArea = blockLength * blockLength;
+				int elements[blockArea];
+				
+				// loop through the 2D block and store each element in the 1D array
+				for (int i = 0; i < blockArea; i++) {
+					// put each element from A into the array, row major
+					elements[i] = A[row+(i/blockLength)][col+(i%blockLength)];
+				}
+				
+				// fire through the 1D array and put values back into a 2D block
+				for (int i = 0; i < blockArea; i++) {
+					// put each element from the array back into B, col major
+					B[col+(i%blockLength)][row+(i/blockLength)] = elements[i];
+				}
+					
+			} else {
+				// the third test case
+				
+				// loop through each cell in the block
+				for(int rowOffset = 0; rowOffset < blockLength; rowOffset++) {
+					for(int colOffset = 0; colOffset < blockLength; colOffset++){
+					
+						// the actual row and col of this block
+						int blockRow = row + rowOffset;
+						int blockCol = col + colOffset;
+						
+						if (blockRow < N && blockCol < M) {
+							// if still within bounds, store A into B
+							B[blockCol][blockRow] = A[blockRow][blockCol];
+						} else{
+							// if out of bounds, leave loop
+							break;
+						}
+							
+					}
+				}
+				
+			} // end test case if
+			
+		} // end column for loop
+	} // end row for loop
+	
+} // end transpose submit function
 
-/* 
- * You can define additional transpose functions below. We've defined
- * a simple one below to help you get started. 
- */ 
+
+ 
 
 /* 
  * trans - A simple baseline transpose function, not optimized for the cache.
  */
 char trans_desc[] = "Simple row-wise scan transpose";
-void trans(int M, int N, int A[N][M], int B[M][N])
-{
+void trans(int M, int N, int A[N][M], int B[M][N]) {
+
     int i, j, tmp;
 
     for (i = 0; i < N; i++) {
@@ -139,6 +142,10 @@ void trans(int M, int N, int A[N][M], int B[M][N])
 
 }
 
+
+
+
+
 /*
  * registerFunctions - This function registers your transpose
  *     functions with the driver.  At runtime, the driver will
@@ -146,8 +153,8 @@ void trans(int M, int N, int A[N][M], int B[M][N])
  *     performance. This is a handy way to experiment with different
  *     transpose strategies.
  */
-void registerFunctions()
-{
+void registerFunctions() {
+
     /* Register your solution function */
     registerTransFunction(transpose_submit, transpose_submit_desc); 
 
@@ -156,13 +163,17 @@ void registerFunctions()
 
 }
 
+
+
+
+
 /* 
  * is_transpose - This helper function checks if B is the transpose of
  *     A. You can check the correctness of your transpose by calling
  *     it before returning from the transpose function.
  */
-int is_transpose(int M, int N, int A[N][M], int B[M][N])
-{
+int is_transpose(int M, int N, int A[N][M], int B[M][N]) {
+
     int i, j;
 
     for (i = 0; i < N; i++) {
@@ -173,4 +184,10 @@ int is_transpose(int M, int N, int A[N][M], int B[M][N])
         }
     }
     return 1;
+    
 }
+
+
+
+
+
